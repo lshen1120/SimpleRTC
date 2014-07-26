@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>WebRTCDemo</title>
+<style type='text/css'>
+#remote {
+  position: absolute;
+  width: 100%;
+  -webkit-transform: rotateY(180deg);
+  -webkit-backface-visibility: hidden;
+}
+#mini {
+  position: absolute;
+  opacity: 1.0;
+  top: 336px;
+  left:448px;
+  transform: scale(-1, 1);
+  -webkit-transform: scale(-1, 1);
+}
+.video_box{
+	position:relative;
+}
+</style>
+	<script src="adapter.js"></script>
+  <script src="webrtc-client.js"></script>
+  <script type='text/javascript'>
+  //简化版调用方式
+      function getQueryStringByName(name) {
+        var result = location.search.match(new RegExp("[\?\&]" + name + "=([^\&]+)", "i"));
+        if (result == null || result.length < 1) {
+          return "";
+        }
+        return result[1];
+	  }
+    var videos = [];
+    window.addEventListener("load",function(){
+      var client=new RTCClient();
+      client.addEventListener("error",function(data){
+      var message=data.message,
+            error=data.error;
+            console.error(message,error);
+            alert(message);
+      });
+    var defaultCfg = {
+        localVideo :document.getElementById('mini'),
+        remoteVideo:document.getElementById('remote'),
+        constraints: {
+          video: true,
+          audio: true
+        },
+        channel: getQueryStringByName("r")
+		};
+		if(getQueryStringByName('video')=="false")
+			defaultCfg.constraints.video=false;
+        client.start(defaultCfg);
+        window.client=client;
+      });
+    </script>
+</head>
+<body>
+<div class="video_box">
+	 <video id="mini" muted="true" autoplay="autoplay" width='192' height='144'></video>
+	 <div id="videos" >
+       <video id="remote" height="480" width="640" autoplay="autoplay" ></video>
+   </div>
+</div>
+</body>
+</html>

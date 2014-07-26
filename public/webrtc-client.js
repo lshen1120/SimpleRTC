@@ -21,6 +21,7 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 		this.channel = null;
 		this.localStreams = [];
 		this.peerConnections = {};
+		this.config=null;
 		var events = {
 			//peer event
 			iceCandidate: "iceCandidate",
@@ -61,7 +62,16 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 				dom.mozSrcObject = stream;
 			}
 		};
+		/*
+		*config:{
+			localVideo:dom
+			remoteVideo:dom,//如果有多个远程连接,不能设置此选项,需要监听addStream事件
+			constraints:{video:true,autio:true}
+			channel:String
+		}
+		*/
 		this.start = function(config) {
+			me.config=config;
 			if (typeof WebSocket === 'undefined') {
 				me.fireEvent("error", new {
 					message: "浏览器不支持WebSocket"
@@ -116,6 +126,9 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 		this.addEventListener(events.removeConnection, function(message) {
 			var remoteId = message.data;
 			delete me.peerConnections[remoteId];
+			if(me.config.remoteVideo){
+				me.config.remoteVideo.src="";
+			}
 		});
 		this.addEventListener(events.newConnection, function(message) {
 			var pc = new PeerConnection(me.SERVER);
@@ -151,6 +164,11 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 				});
 			}
 			pc.onaddstream = function(event) {
+				var remoteVideo=me.config.remoteVideo;
+				if(remoteVideo){
+					me.attachStream(event.stream,remoteVideo);
+					remoteVideo.id="remote"+remoteId;
+				}
 				me.fireEvent(events.addStream, {
 					stream: event.stream,
 					remoteId: remoteId
