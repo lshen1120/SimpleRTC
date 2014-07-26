@@ -9,7 +9,7 @@ stunServer.setAddress1('0.0.0.0'); //外网IP
 stunServer.setPort0(9001);
 stunServer.setPort1(9001);
 
-app.set('port', process.env.PORT || 80);
+app.set('port', process.env.PORT || 8000);
 app.use(express.static(__dirname + '/public'));
 app.use(logger("dev"));
 
