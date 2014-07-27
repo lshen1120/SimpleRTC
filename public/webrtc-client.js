@@ -198,7 +198,6 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 							to: remoteId,
 							data: session_description
 						};
-						console.log("send %s", remoteId);
 						me.channel.send(msg);
 					}, function(error) {
 						me.fireEvent("error", {
