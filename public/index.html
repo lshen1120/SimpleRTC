@@ -35,19 +35,18 @@
       var videos = [];
       window.addEventListener("load",function(){
         var client=new RTCClient();
-        client.addEventListener("error",function(data){
-          var message=data.message,
-              error=data.error;
+        client.addEventListener("error",function(event){
+          var message=event.errorMessage,
+              error=event.error;
             console.error(message,error);
             alert(message);
         });
         client.addEventListener("addStream",function(message){
-          var video=createVideo(message.remoteId);
+          var video=createVideo(message.from);
           client.attachStream(message.stream,video);
         });
         client.addEventListener("removeConnection",function(message){
-          var remoteId=message.data;
-          removeVideo(remoteId);
+          removeVideo(message.connectionId);
         });
         var defaultCfg = {
           localVideo :document.getElementById('mini'),

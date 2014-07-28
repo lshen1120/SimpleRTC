@@ -3,8 +3,7 @@ var WebSocketServer = require('ws').Server,
 	util = require("util");
 /*
 	message:{
-		eventName:"createOffer",
-		data:"",
+		type:"createOffer",
 		to:""
 	}
 	event:wsConnected  data:ws
@@ -103,6 +102,9 @@ function RTCServer() {
 			message = data.message;
 		//指向性消息
 		if (message.to) {
+			if(message.to == "broadcast" ){//广播消息
+				return;
+			}
 			var remoteWs = me.connections[message.to];
 			if (remoteWs) {
 				message.from = ws.id;
@@ -122,8 +124,8 @@ function RTCServer() {
 			if (channel[wsId] != ws) {
 				remoteConnections.push(wsId);
 				var message = {
-					eventName: "newConnection",
-					data: ws.id,
+					type: "newConnection",
+					connectionId: ws.id,
 					from: "Server"
 				};
 				channel[wsId].send(JSON.stringify(message));
@@ -132,8 +134,8 @@ function RTCServer() {
 		}
 		if (remoteConnections.length > 0) {
 			var message = {
-				eventName: "getConnections",
-				data: remoteConnections,
+				type: "getConnections",
+				connectionIds: remoteConnections,
 				from: "Server"
 			};
 			ws.send(JSON.stringify(message));
@@ -147,8 +149,8 @@ function RTCServer() {
 			if (channel[wsId] != ws) {
 				if (channel[wsId] != ws) {
 					var message = {
-						eventName: "removeConnection",
-						data: ws.id,
+						type: "removeConnection",
+						connectionId: ws.id,
 						from: "Server"
 					};
 					channel[wsId].send(JSON.stringify(message));

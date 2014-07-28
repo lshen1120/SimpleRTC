@@ -24,30 +24,31 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 		this.config=null;
 		var events = {
 			//peer event
-			iceCandidate: "iceCandidate",
-			createOffer: "createOffer",
-			createAnswer: "createAnswer",
-			addStream: "addStream", // {stream:stream,remoteId:""}
-			removeStream: "removeStream",
+			iceCandidate: "iceCandidate",  // {candidate:"",from:""}
+			createOffer: "createOffer",	   // {sdp:"",from:""}
+			createAnswer: "createAnswer",  // {sdp:"",from:""}
+			addStream: "addStream",        // {stream:stream,from:""}
+			removeStream: "removeStream",  // {stream:stream,from:""}
 			//local event
-			signalingStateChange: "signalingStateChange",
-			peerConnectionOpen: "peerConnectionOpen",
-			channelOpen: "channelOpen",
+			signalingStateChange: "signalingStateChange",// {connectionId:"",state:""}
+			peerConnectionOpen: "peerConnectionOpen",	//  {connectionId:""}
+			channelOpen: "channelOpen",					//  { channel:"" }
 			//server event
-			removeConnection: "removeConnection",
-			newConnection: "newConnection",
-			getConnections: "getConnections"
+			removeConnection: "removeConnection", // { connectionId:""  }
+			newConnection: "newConnection",	      // { connectionId:""  }
+			getConnections: "getConnections"	  // { connectionIds:[] }
 		};
 		this.events = events;
 		var me = this;
-		this.addEventListener = function(eventName, callback) {
-			if (!this.eventHandlers[eventName]) this.eventHandlers[eventName] = [];
-			this.eventHandlers[eventName].push(callback);
+		this.addEventListener = function(type, callback) {
+			if (!this.eventHandlers[type]) this.eventHandlers[type] = [];
+			this.eventHandlers[type].push(callback);
 		};
 
-		this.fireEvent = function(eventName, data) {
-			console.log("receiveEvent[%s] :", eventName, data);
-			var callbacks = me.eventHandlers[eventName];
+		this.fireEvent = function(type, data) {
+			data.type=type;
+			console.log("receiveEvent:", data);
+			var callbacks = me.eventHandlers[type];
 			if (callbacks) {
 				for (var i = callbacks.length - 1; i >= 0; i--) {
 					callbacks[i](data);
@@ -74,7 +75,7 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 			me.config=config;
 			if (typeof WebSocket === 'undefined') {
 				me.fireEvent("error", new {
-					message: "浏览器不支持WebSocket"
+					errorMessage: "浏览器不支持WebSocket"
 				});
 			}
 			if (getUserMedia) {
@@ -84,13 +85,13 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 					connect(config.channel);
 				}, function(error) {
 					me.fireEvent("error", {
-						message: "获取本地媒体失败",
+						errorMessage: "获取本地媒体失败",
 						error: error
 					});
 				});
 			} else {
 				me.fireEvent("error", {
-					message: 'webRTC is not yet supported in this browser.'
+					errorMessage: 'webRTC is not yet supported in this browser.'
 				})
 			}
 		}
@@ -98,15 +99,14 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 		function connect(channel) {
 			var wsChannel = new WebSocket("ws://" + location.host + "/" + channel);
 			wsChannel.onopen = function() {
-				me.fireEvent(events.channelOpen, wsChannel);
+				me.fireEvent(events.channelOpen, { channel:wsChannel });
 				wsChannel.onmessage = function(msg) {
-					var message = null;
 					try {
-						message = JSON.parse(msg.data);
+						var event = JSON.parse(msg.data);
+						me.fireEvent(event.type, event);
 					} catch (ex) {
 						console.error("parse message fialed :", msg.data);
 					}
-					me.fireEvent(message.eventName, message);
 				}
 			}
 			wsChannel.onclose = function() {
@@ -117,91 +117,88 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 				console.error("channel[%s] error", err);
 			}
 			me.channel = {
-				send: function(data) {
-					wsChannel.send(JSON.stringify(data));
-					console.log("sendEvent[%s]:", data.eventName, data);
+				send: function(event) {
+					wsChannel.send(JSON.stringify(event));
+					console.log("sendEvent:", event);
 				}
 			};
 		}
-		this.addEventListener(events.removeConnection, function(message) {
-			var remoteId = message.data;
-			delete me.peerConnections[remoteId];
+		this.addEventListener(events.removeConnection, function(event) {
+			delete me.peerConnections[event.connectionId];
 			if(me.config.remoteVideo){
 				me.config.remoteVideo.src="";
 			}
 		});
-		this.addEventListener(events.newConnection, function(message) {
+		this.addEventListener(events.newConnection, function(event) {
 			var pc = new PeerConnection(me.SERVER);
-			var remoteId = message.data;
-			createPeerConnection(remoteId);
+			createPeerConnection(event.connectionId);
 		});
 
-		function createPeerConnection(remoteId) {
+		function createPeerConnection(remoteid) {
 			var pc = new PeerConnection(me.SERVER);
-			me.peerConnections[remoteId] = pc;
+			me.peerConnections[remoteid] = pc;
 			for (var i = me.localStreams.length - 1; i >= 0; i--) {
 				pc.addStream(me.localStreams[i]);
 			};
 			pc.onicecandidate = function(event) {
 				if (event.candidate) {
-					var message = {
-						eventName: events.iceCandidate,
-						data: event.candidate,
-						to: remoteId
-					};
-					me.channel.send(message);
+					me.channel.send({
+						type: events.iceCandidate,
+						candidate: event.candidate,
+						to: remoteid
+					});
 				}
 			}
 			pc.onsignalingstatechange = function() {
 				me.fireEvent(events.signalingStateChange, {
-					remoteId: remoteId,
+					connectionId: remoteid,
 					state: pc.signalingState
 				});
 			};
 			pc.onopen = function() {
 				me.fireEvent(events.peerConnectionOpen, {
-					remoteId: remoteId
+					connectionId: remoteid
 				});
 			}
 			pc.onaddstream = function(event) {
 				var remoteVideo=me.config.remoteVideo;
 				if(remoteVideo){
 					me.attachStream(event.stream,remoteVideo);
-					remoteVideo.id="remote"+remoteId;
+					remoteVideo.id="remote"+remoteid;
 				}
 				me.fireEvent(events.addStream, {
 					stream: event.stream,
-					remoteId: remoteId
+					from: remoteid
 				});
 			};
 			pc.onremovestream = function(event) {
 				me.fireEvent(events.removeStream, {
 					stream: event.stream,
-					remoteId: remoteId
+					remoteid: remoteid
 				});
 			}
 			return pc;
 		}
 
-		this.addEventListener(events.getConnections, function(message) {
-			var connections = message.data;
+		this.addEventListener(events.getConnections, function(event) {
+			var connections = event.connectionIds;
 			for (var i = connections.length - 1; i >= 0; i--) {
 				(function() {
-					var remoteId = connections[i];
-					var pc = createPeerConnection(remoteId);
-					console.log("create offer to %s", remoteId);
+					var remoteid = connections[i];
+					var pc = createPeerConnection(remoteid);
+					console.log("create offer to %s", remoteid);
 					//create offer
 					pc.createOffer(function(session_description) {
 						pc.setLocalDescription(session_description);
 						var msg = {
-							eventName: events.createOffer,
-							to: remoteId,
-							data: session_description
+							type: events.createOffer,
+							to: remoteid,
+							sdp: session_description
 						};
 						me.channel.send(msg);
 					}, function(error) {
 						me.fireEvent("error", {
-							message: "create offer fialed",
+							errorMessage: "create offer fialed",
 							error: error
 						});
 					},mediaConstraints);
@@ -209,32 +206,35 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 			};
 		});
 
-		this.addEventListener(events.iceCandidate, function(message) {
-			var pc = me.peerConnections[message.from];
-			var candidate = new RTCIceCandidate(message.data);
+		this.addEventListener(events.iceCandidate, function(event) {
+			var pc = me.peerConnections[event.from];
+			var candidate = new RTCIceCandidate(event.candidate);
 			pc.addIceCandidate(candidate);
 		});
 
-		this.addEventListener(events.createOffer, function(message) {
-			var pc = me.peerConnections[message.from];
-			pc.setRemoteDescription(new RTCSessionDescription(message.data));
+		this.addEventListener(events.createOffer, function(event) {
+			var pc = me.peerConnections[event.from];
+			pc.setRemoteDescription(new RTCSessionDescription(event.sdp));
 			pc.createAnswer(function(sdp) {
 				pc.setLocalDescription(sdp);
-				var returnMsg = {
-					eventName: events.createAnswer,
-					data: sdp,
-					to: message.from
-				};
-				me.channel.send(returnMsg);
-			}, function(err) {
-				console.error("create answer error", err);
-				alert(err);
-			},mediaConstraints);
+				me.channel.send({
+					type: events.createAnswer,
+					sdp: sdp,
+					to: event.from
+				});
+			}, 
+			function(err){
+				me.fireEvent("error", {
+					errorMessage: "create answer fialed",
+					error: error
+				});	
+			},
+			mediaConstraints);
 		})
 
-		this.addEventListener(events.createAnswer, function(message) {
-			var pc = me.peerConnections[message.from];
-			var answer = new RTCSessionDescription(message.data);
+		this.addEventListener(events.createAnswer, function(event) {
+			var pc = me.peerConnections[event.from];
+			var answer = new RTCSessionDescription(event.sdp);
 			pc.setRemoteDescription(answer);
 		})
 	}

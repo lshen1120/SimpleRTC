@@ -35,11 +35,11 @@
     var videos = [];
     window.addEventListener("load",function(){
       var client=new RTCClient();
-      client.addEventListener("error",function(data){
-      var message=data.message,
-            error=data.error;
-            console.error(message,error);
-            alert(message);
+      client.addEventListener("error",function(event){
+        var message=event.errorMessage,
+            error=event.error;
+        console.error(message,error);
+        alert(message);
       });
     var defaultCfg = {
         localVideo :document.getElementById('mini'),
