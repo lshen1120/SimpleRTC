@@ -6,8 +6,9 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 	function RTCClient() {
 		this.SERVER = {
 			iceServers: [
-				{url: "stun:" + location.hostname + ":9001"},
-				{url: "turn:" + location.hostname  + ":5766?transport=tcp"}
+				{url: "turn:" + location.hostname},
+				{url: "stun:" + location.hostname},
+				{url: "stun:" + location.hostname + ":9001"}
 				]
 		};
 		//createOffer createAnswer 第三个参数RTCOfferOptions
