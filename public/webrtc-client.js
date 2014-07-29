@@ -5,9 +5,10 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 (function(exports) {
 	function RTCClient() {
 		this.SERVER = {
-			iceServers: [{
-				url: "stun:" + location.hostname + ":9001"
-			}]
+			iceServers: [
+				{url: "stun:" + location.hostname + ":9001"},
+				{url: "turn:" + location.hostname  + ":5766?transport=tcp"}
+				]
 		};
 		//createOffer createAnswer 第三个参数RTCOfferOptions
 		var mediaConstraints = { 
