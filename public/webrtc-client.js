@@ -101,12 +101,14 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 			wsChannel.onopen = function() {
 				me.fireEvent(events.channelOpen, { channel:wsChannel });
 				wsChannel.onmessage = function(msg) {
+					var event=null;
 					try {
-						var event = JSON.parse(msg.data);
-						me.fireEvent(event.type, event);
+						event = JSON.parse(msg.data);
 					} catch (ex) {
 						console.error("parse message fialed :", msg.data);
+						return;
 					}
+					me.fireEvent(event.type, event);
 				}
 			}
 			wsChannel.onclose = function() {
