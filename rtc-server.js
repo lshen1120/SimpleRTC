@@ -9,7 +9,6 @@ var WebSocketServer = require('ws').Server,
 	event:wsConnected  data:ws
 	event:wsMessage   data:{ ws:ws message:message }
 	event:wsClose  data:ws
-	event:getConnections data:remoteConnections
 */
 function RTCServer() {
 	events.EventEmitter.call(this);
@@ -102,7 +101,12 @@ function RTCServer() {
 			message = data.message;
 		//指向性消息
 		if (message.to) {
-			if(message.to == "broadcast" ){//广播消息
+			if(message.to == "All" ){//广播消息
+				message.from=ws.id;
+				for(var remoteId in me.connections){
+					me.connections[remoteId].send(JSON.stringify(message));
+					onsole.log("Server[broadcast] -> %s :", remoteId, message);
+				}
 				return;
 			}
 			var remoteWs = me.connections[message.to];

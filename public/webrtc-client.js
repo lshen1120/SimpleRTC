@@ -24,7 +24,7 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 		this.config=null;
 		var events = {
 			//peer event
-			iceCandidate: "iceCandidate",  // {candidate:"",from:""}
+			iceCandidate: "candidate",  // {candidate:"",from:""}
 			createOffer: "createOffer",	   // {sdp:"",from:""}
 			createAnswer: "createAnswer",  // {sdp:"",from:""}
 			addStream: "addStream",        // {stream:stream,from:""}
@@ -216,22 +216,29 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 
 		this.addEventListener(events.createOffer, function(event) {
 			var pc = me.peerConnections[event.from];
-			pc.setRemoteDescription(new RTCSessionDescription(event.sdp));
-			pc.createAnswer(function(sdp) {
+			var remoteSdp=new RTCSessionDescription(event.sdp);
+			pc.setRemoteDescription(remoteSdp,function(){
+				pc.createAnswer(function(sdp) {
 				pc.setLocalDescription(sdp);
 				me.channel.send({
 					type: events.createAnswer,
 					sdp: sdp,
 					to: event.from
 				});
-			}, 
+				}, function(err){
+					me.fireEvent("error", {
+						errorMessage: "create answer fialed",
+						error: err
+					});	
+				},mediaConstraints);
+			},
 			function(err){
 				me.fireEvent("error", {
-					errorMessage: "create answer fialed",
-					error: error
+					errorMessage: "setRemoteDescriptionfialed",
+					error: err
 				});	
-			},
-			mediaConstraints);
+			});
+			
 		})
 
 		this.addEventListener(events.createAnswer, function(event) {
