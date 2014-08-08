@@ -48,7 +48,7 @@
           video: true,
           audio: true
         },
-        channel: getQueryStringByName("r")
+        channelUrl:"ws://" + location.host + "/" + getQueryStringByName("r")
 		};
 		if(getQueryStringByName('video')=="false")
 			defaultCfg.constraints.video=false;
