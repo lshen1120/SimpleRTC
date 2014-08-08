@@ -7,6 +7,10 @@ var RTCSessionDescription = RTCSessionDescription || mozRTCSessionDescription;
 		this.SERVER = {
 			iceServers: [{
 				url: "stun:" + location.hostname + ":9001"
+			}, {
+				"url": "turn:211.64.115.116?transport=tcp",
+				"credential": "shij",
+				"username": "shij"
 			}]
 		};
 		//createOffer createAnswer 第三个参数RTCOfferOptions
