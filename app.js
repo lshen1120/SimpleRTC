@@ -3,6 +3,16 @@ var express = require('express'),
   logger = require('morgan');
   rtcServer=require("./rtc-server")
   app = express();
+var fs = require('fs');
+
+var https = require('https');
+var hskey = fs.readFileSync('cert/hacksparrow-key.pem');
+var hscert = fs.readFileSync('cert/hacksparrow-cert.pem')
+var options = {
+    key: hskey,
+    cert: hscert
+};
+
 var stunServer = require('stunsrv').createServer();
 stunServer.setAddress0("127.0.0.1");
 stunServer.setAddress1('0.0.0.0'); //外网IP
@@ -14,7 +24,7 @@ app.use(express.static(__dirname + '/public'));
 app.use(logger("dev"));
 
 
-var httpServer=http.createServer(app).listen(app.get('port'), function() {
+var httpServer=https.createServer(options,app).listen(app.get('port'), function() {
   console.log("Express server listening on port " + app.get('port'));
 });
 rtcServer.listen(httpServer);
